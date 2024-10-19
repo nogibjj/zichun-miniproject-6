@@ -1,69 +1,115 @@
 
-# Zichun Mini Project 1
+# Week 6 Mini Project
 
-This is a Python project template with a functioning `Makefile`, a `.devcontainer`, and basic setup for CI/CD using GitHub Actions. The project also includes unit tests and linting with `pylint`.
+## Project Overview
 
-## Links
+This project demonstrates the use of Databricks as an external database for running complex SQL queries. 
+The SQL query involves:
+- **Joins**: To combine data from the `Customers` and `Orders` tables.
+- **Aggregation**: To calculate the total amount spent by each customer.
+- **Filtering**: To include only customers who spent more than $1000.
+- **Sorting**: To display customers in descending order of total amount spent.
 
-- **Version control Source Code Management Repository**: [github repo](https://github.com/nogibjj/zichun-miniproject-1).
-- **Link to successful CI/CD run**: [Link to GitHub Actions](https://github.com/nogibjj/zichun-miniproject-1/actions).
+## Files
+- `databricks/query.sql`: Contains the SQL query.
+- `src/main.py`: Python script to connect to Databricks and run the SQL query.
+- `tests/test_main.py`: Contains the tests for validating the query.
+- `ci.yml`: GitHub Actions workflow to automate testing.
 
 
-## Project Setup
+## Setting up Databricks
 
-### 1. Clone the Repository
+1. Create a new cluster from the **Clusters** tab.
+2. Create a new Notebook under the **Workspace** tab.
+3. Use the following code to create the `Customers` and `Orders` tables in Databricks:
+    ```python
+    spark.sql("""
+    CREATE OR REPLACE TEMP VIEW Customers AS
+    SELECT * FROM VALUES 
+    (1, 'Alice', 'USA'),
+    (2, 'Bob', 'Canada')
+    AS Customers(customer_id, customer_name, country)
+    """)
 
-```bash
-git clone https://github.com/your-username/zichun-miniproject-1.git
-cd zichun-miniproject-1
+    spark.sql("""
+    CREATE OR REPLACE TEMP VIEW Orders AS
+    SELECT * FROM VALUES 
+    (1, 1, 1200),
+    (2, 2, 800)
+    AS Orders(order_id, customer_id, total_amount)
+    """)
+    ```
+
+### 2. Running the SQL Query in Databricks
+
+Once the tables are created, you can run the SQL query using the following Databricks code:
+```python
+result = spark.sql("""
+SELECT 
+    c.customer_id,
+    c.customer_name,
+    c.country,
+    SUM(o.total_amount) AS total_spent
+FROM 
+    Customers c
+JOIN 
+    Orders o 
+ON 
+    c.customer_id = o.customer_id
+GROUP BY 
+    c.customer_id, c.customer_name, c.country
+HAVING 
+    SUM(o.total_amount) > 1000
+ORDER BY 
+    total_spent DESC
+""")
+result.show()
 ```
 
-### 2. Install Dependencies
+### 3. Python Setup for Databricks SQL API
 
-You can install the required Python dependencies by running:
+Run the SQL query using Python's Databricks SQL API.
 
-```bash
-make setup
-```
+1. Install the Databricks SQL connector:
+    ```bash
+    pip install databricks-sql-connector
+    ```
 
-This will install all the packages listed in `requirements.txt`.
-
-### 3. Running the Linter
-
-To ensure your code follows proper Python style guidelines, run:
-
-```bash
-make lint
-```
-
-This will run `pylint` on the `src/main.py` file.
-
-### 4. Running Tests
-
-To run the unit tests using `pytest`, use the following command:
-
-```bash
-make test
-```
-
-The `Makefile` is set up to run the tests in the `tests/` directory.
-
-## Usage Instructions
-
-The project contains a simple `add` function and a main script. You can run the main script as follows:
-
-```bash
-python src/main.py
-```
-
-The `main.py` file will print "Hello, world!" when executed.
+2. Run the Python script to execute the SQL query on Databricks:
+    ```bash
+    python src/main.py
+    ```
 
 ## CI/CD Pipeline
 
-This project uses GitHub Actions for Continuous Integration (CI). The workflow is defined in the `.github/workflows/ci.yml` file and runs automatically on every push to the main branch. The CI performs the following actions:
-- Linting with `pylint`
-- Running unit tests with `pytest`
+The CI/CD pipeline is set up to automatically run the tests when a new commit is pushed to the `main` branch. The pipeline performs the following steps:
+- Sets up the Python environment.
+- Installs dependencies.
+- Executes the tests in `test_main.py`, which connect to Databricks and run the SQL query.
 
-## Development Environment with Devcontainer
+## Expected Output
 
-A development container is included to ensure consistency in development environments. The `.devcontainer` folder contains a `Dockerfile` and `devcontainer.json` file for setting up the containerized development environment in tools like Visual Studio Code.
+Running the query should return:
+- Customers who have spent more than $1000.
+- The results should be sorted in descending order of the total amount spent.
+
+## How to Run
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/nogibjj/zichun-miniproject-6.git
+   cd zichun-miniproject-6
+   ```
+
+2. Set up a Python environment and install dependencies:
+   ```bash
+   python3 -m venv env
+   source env/bin/activate
+   pip install -r requirements.txt
+   ```
+
+3. Run the tests:
+   ```bash
+   pytest tests/test_main.py
+   ```
+

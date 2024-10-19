@@ -1,36 +1,32 @@
-name: Python CI
+name: Databricks SQL Query CI
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  build:
+  test_sql:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
 
-      - name: Lint with pylint
-        run: |
-          pylint src/main.py
+    - name: Run SQL query tests
+      run: |
+        pytest tests/test_main.py
 
-      - name: Run tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}/src  # Set PYTHONPATH to include src
-        run: |
-          pytest tests
-
+    # Set Databricks environment variables for the CI/CD pipeline
+    env:
+      DATABRICKS_SERVER_HOSTNAME: ${{ secrets.DATABRICKS_SERVER_HOSTNAME }}
+      DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+      DATABRICKS_ACCESS_TOKEN: ${{ secrets.DATABRICKS_ACCESS_TOKEN }}
