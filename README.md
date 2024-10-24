@@ -149,7 +149,3 @@ jobs:
 1. **SQL Query**: The query is located in `src/main.py` and executed in Databricks.
 2. **Explanation**: The query explanation and expected results are provided above.
 3. **CI/CD Pipeline**: The pipeline is defined in `.github/workflows/ci.yml`.
-
-## Submission
-
-Please submit the public repository URL for this project.
