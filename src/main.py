@@ -15,6 +15,9 @@ def load_titanic_data():
 
 # Function to upload Titanic data to Databricks
 def upload_to_databricks(df):
+    df.dropna(inplace=True)
+
+
     # Connect to Databricks
     connection = sql.connect(
         server_hostname=server_hostname,
