@@ -1,4 +1,5 @@
 import pytest
+import os
 from databricks import sql
 
 # Databricks connection details
