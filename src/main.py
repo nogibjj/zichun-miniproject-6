@@ -10,7 +10,7 @@ access_token = os.getenv("DATABRICKS_ACCESS_TOKEN")
 # Function to read the titanic.csv file
 def load_titanic_data():
     # Read the CSV file
-    df = pd.read_csv('titanic.csv')
+    df = pd.read_csv('../data/titanic.csv')
     return df
 
 # Function to upload Titanic data to Databricks
