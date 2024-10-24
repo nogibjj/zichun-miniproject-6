@@ -3,113 +3,153 @@
 
 ## Project Overview
 
-This project demonstrates the use of Databricks as an external database for running complex SQL queries. 
-The SQL query involves:
-- **Joins**: To combine data from the `Customers` and `Orders` tables.
-- **Aggregation**: To calculate the total amount spent by each customer.
-- **Filtering**: To include only customers who spent more than $1000.
-- **Sorting**: To display customers in descending order of total amount spent.
+This project demonstrates the design and execution of a complex SQL query based on the Titanic dataset. The project involves:
+- **Joins**: Though not applicable for a single table like Titanic, complex queries can include join concepts for multi-table designs.
+- **Aggregation**: Summarizing data using aggregate functions like `COUNT()`.
+- **Sorting**: Ordering the result set by specific fields.
 
-## Files
-- `databricks/query.sql`: Contains the SQL query.
-- `src/main.py`: Python script to connect to Databricks and run the SQL query.
-- `tests/test_main.py`: Contains the tests for validating the query.
-- `ci.yml`: GitHub Actions workflow to automate testing.
+The SQL query is designed to process data in a Databricks environment using Python and the Databricks SQL API. The project also includes a CI/CD pipeline to automate the testing of the SQL query and its results.
 
+## SQL Query Explanation
 
-## Setting up Databricks
+The query in this project analyzes the Titanic dataset to calculate the survival rate of passengers by their gender and class. The results are sorted by the survival rate in descending order.
 
-1. Create a new cluster from the **Clusters** tab.
-2. Create a new Notebook under the **Workspace** tab.
-3. Use the following code to create the `Customers` and `Orders` tables in Databricks:
-    ```python
-    spark.sql("""
-    CREATE OR REPLACE TEMP VIEW Customers AS
-    SELECT * FROM VALUES 
-    (1, 'Alice', 'USA'),
-    (2, 'Bob', 'Canada')
-    AS Customers(customer_id, customer_name, country)
-    """)
+### Query:
 
-    spark.sql("""
-    CREATE OR REPLACE TEMP VIEW Orders AS
-    SELECT * FROM VALUES 
-    (1, 1, 1200),
-    (2, 2, 800)
-    AS Orders(order_id, customer_id, total_amount)
-    """)
-    ```
-
-### 2. Running the SQL Query in Databricks
-
-Once the tables are created, you can run the SQL query using the following Databricks code:
-```python
-result = spark.sql("""
+```sql
 SELECT 
-    c.customer_id,
-    c.customer_name,
-    c.country,
-    SUM(o.total_amount) AS total_spent
+    Pclass,
+    Sex,
+    COUNT(CASE WHEN Survived = 1 THEN 1 END) AS SurvivedCount,
+    COUNT(*) AS TotalPassengers,
+    (COUNT(CASE WHEN Survived = 1 THEN 1 END) / COUNT(*)) * 100 AS SurvivalRate
 FROM 
-    Customers c
-JOIN 
-    Orders o 
-ON 
-    c.customer_id = o.customer_id
+    Titanic
 GROUP BY 
-    c.customer_id, c.customer_name, c.country
-HAVING 
-    SUM(o.total_amount) > 1000
+    Pclass, Sex
 ORDER BY 
-    total_spent DESC
-""")
-result.show()
+    SurvivalRate DESC;
 ```
 
-### 3. Python Setup for Databricks SQL API
+### Explanation:
 
-Run the SQL query using Python's Databricks SQL API.
+1. **Aggregation**:
+   - `COUNT(CASE WHEN Survived = 1 THEN 1 END)` counts the number of passengers who survived (`Survived = 1`).
+   - `COUNT(*)` counts the total number of passengers in each group (by `Pclass` and `Sex`).
+   
+2. **Calculation**:
+   - The survival rate is calculated as `(COUNT(CASE WHEN Survived = 1 THEN 1 END) / COUNT(*)) * 100`, representing the percentage of passengers who survived in each group.
+   
+3. **Grouping**:
+   - The `GROUP BY` clause groups the data by passenger class (`Pclass`) and gender (`Sex`).
 
-1. Install the Databricks SQL connector:
-    ```bash
-    pip install databricks-sql-connector
-    ```
+4. **Sorting**:
+   - The results are ordered by the calculated survival rate in descending order, so the groups with the highest survival rate appear first.
 
-2. Run the Python script to execute the SQL query on Databricks:
-    ```bash
-    python src/main.py
-    ```
+### Expected Results:
+- This query returns the survival rate of passengers grouped by class and gender, along with the number of survivors and total passengers in each group.
+
+### Sample Output:
+
+| Pclass | Sex    | SurvivedCount | TotalPassengers | SurvivalRate |
+|--------|--------|---------------|-----------------|--------------|
+| 1      | female | 80            | 85              | 94.12%       |
+| 3      | female | 90            | 165             | 54.55%       |
+| 1      | male   | 40            | 180             | 22.22%       |
 
 ## CI/CD Pipeline
 
-The CI/CD pipeline is set up to automatically run the tests when a new commit is pushed to the `main` branch. The pipeline performs the following steps:
-- Sets up the Python environment.
-- Installs dependencies.
-- Executes the tests in `test_main.py`, which connect to Databricks and run the SQL query.
+The project uses **GitHub Actions** to automate testing and validation. The pipeline is defined in the `.github/workflows/ci.yml` file, and it performs the following steps:
 
-## Expected Output
+1. **Install dependencies**:
+   - Sets up the Python environment and installs required packages (such as `databricks-sql-connector` and `pytest`).
 
-Running the query should return:
-- Customers who have spent more than $1000.
-- The results should be sorted in descending order of the total amount spent.
+2. **Run SQL query tests**:
+   - Executes the `main.py` script to upload data to the Databricks database and test the SQL query.
 
-## How to Run
+3. **Run automated tests**:
+   - Uses `pytest` to validate the SQL query results using a predefined test file (`test_main.py`).
 
-1. Clone the repository:
+### CI/CD Example Workflow:
+
+```yaml
+name: Databricks SQL Query CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test_sql:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run main.py to load CSV and create tables
+      env:
+        DATABRICKS_SERVER_HOSTNAME: ${{ secrets.DATABRICKS_SERVER_HOSTNAME }}
+        DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+        DATABRICKS_ACCESS_TOKEN: ${{ secrets.DATABRICKS_ACCESS_TOKEN }}
+      run: |
+        python src/main.py
+
+    - name: Run SQL query tests
+      env:
+        DATABRICKS_SERVER_HOSTNAME: ${{ secrets.DATABRICKS_SERVER_HOSTNAME }}
+        DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+        DATABRICKS_ACCESS_TOKEN: ${{ secrets.DATABRICKS_ACCESS_TOKEN }}
+      run: |
+        pytest tests/test_main.py
+```
+
+## How to Run the Project Locally
+
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/nogibjj/zichun-miniproject-6.git
-   cd zichun-miniproject-6
    ```
 
-2. Set up a Python environment and install dependencies:
+2. **Set up Python environment**:
+   Make sure you have Python 3.x installed. You can create a virtual environment:
+
    ```bash
-   python3 -m venv env
-   source env/bin/activate
+   python -m venv env
+   source env/bin/activate  # On Windows use `env\Scriptsctivate`
+   ```
+
+3. **Install dependencies**:
+   ```bash
    pip install -r requirements.txt
    ```
 
-3. Run the tests:
+4. **Run the `main.py` script** to upload the Titanic dataset and run the SQL query:
+   ```bash
+   python src/main.py
+   ```
+
+5. **Run tests**:
+   You can run the tests using `pytest`:
    ```bash
    pytest tests/test_main.py
    ```
 
+## Deliverables
+
+1. **SQL Query**: The query is located in `src/main.py` and executed in Databricks.
+2. **Explanation**: The query explanation and expected results are provided above.
+3. **CI/CD Pipeline**: The pipeline is defined in `.github/workflows/ci.yml`.
+
+## Submission
+
+Please submit the public repository URL for this project.
