@@ -1,10 +1,10 @@
 import pytest
 from databricks import sql
 
-# Databricks connection details (update with your actual credentials)
-server_hostname = "<databricks-server-host>"
-http_path = "<databricks-http-path>"
-access_token = "<databricks-access-token>"
+# Databricks connection details
+server_hostname = os.getenv("DATABRICKS_SERVER_HOSTNAME")
+http_path = os.getenv("DATABRICKS_HTTP_PATH")
+access_token = os.getenv("DATABRICKS_ACCESS_TOKEN")
 
 @pytest.fixture(scope="module")
 def db_connection():
@@ -18,24 +18,16 @@ def db_connection():
     connection.close()
 
 def test_query(db_connection):
+    # Query for passengers who survived
     query = """
     SELECT 
-        c.customer_id,
-        c.customer_name,
-        c.country,
-        SUM(o.total_amount) AS total_spent
+        PassengerId, Name, Survived, Pclass, Sex, Age
     FROM 
-        Customers c
-    JOIN 
-        Orders o 
-    ON 
-        c.customer_id = o.customer_id
-    GROUP BY 
-        c.customer_id, c.customer_name, c.country
-    HAVING 
-        SUM(o.total_amount) > 1000
+        Titanic
+    WHERE
+        Survived = 1
     ORDER BY 
-        total_spent DESC;
+        Age ASC;
     """
     
     cursor = db_connection.cursor()
@@ -43,5 +35,6 @@ def test_query(db_connection):
     result = cursor.fetchall()
     
     # Example assertions
-    assert len(result) == 1  # Expecting one customer to meet the threshold
-    assert result[0][1] == 'Alice'  # Alice should be the customer
+    assert len(result) > 0  # Expecting at least one survivor
+    assert result[0][2] == 1  # The 'Survived' column should be 1 (true)
+    assert result[0][4] in ['male', 'female']  # Gender should be 'male' or 'female'
